@@ -1,0 +1,471 @@
+
+<style>
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+*{box-sizing:border-box;margin:0;padding:0}
+#root{padding:1rem 0;display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+#cw{width:100%;aspect-ratio:16/9;border-radius:var(--border-radius-lg);overflow:hidden;background:#070710;border:0.5px solid var(--color-border-tertiary);cursor:grab;position:relative}
+#cw:active{cursor:grabbing}
+canvas{width:100%;height:100%;display:block}
+#op-label{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:12px;color:rgba(180,200,255,0.7);letter-spacing:0.06em;text-align:center;pointer-events:none;opacity:0;transition:opacity 0.8s;white-space:nowrap;font-style:italic}
+#op-label.visible{opacity:1}
+.transport{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.btn{display:flex;align-items:center;gap:5px;font-size:13px;padding:6px 14px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);color:var(--color-text-primary);cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--color-background-secondary)}
+.btn:disabled{opacity:0.3;pointer-events:none}
+.btn-stop{color:var(--color-text-danger);border-color:var(--color-border-danger)}
+.btn-stop:hover{background:var(--color-background-danger)}
+input[type=file]{display:none}
+.lbl-btn{display:flex;align-items:center;gap:5px;font-size:13px;padding:6px 14px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);color:var(--color-text-primary);cursor:pointer}
+.lbl-btn:hover{background:var(--color-background-secondary)}
+.seek-row{width:100%;display:flex;flex-direction:column;gap:6px}
+.seek-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#status-txt{font-size:12px;color:var(--color-text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+#time-txt{font-size:12px;color:var(--color-text-secondary);font-family:var(--font-mono);flex-shrink:0}
+#prog-track{width:100%;height:10px;background:var(--color-background-secondary);border-radius:5px;cursor:pointer;position:relative;user-select:none}
+#prog-fill{height:100%;width:0%;background:var(--color-text-secondary);border-radius:5px;pointer-events:none}
+#prog-thumb{width:14px;height:14px;border-radius:50%;background:var(--color-text-primary);position:absolute;top:50%;transform:translate(-50%,-50%);pointer-events:none;display:none}
+.score-block{width:100%;border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);padding:20px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--color-background-primary)}
+.score-label{font-size:11px;letter-spacing:0.12em;color:var(--color-text-secondary);text-transform:uppercase}
+.score-number{font-size:72px;font-weight:500;font-family:var(--font-mono);line-height:1;transition:color 0.6s}
+.score-bar-track{width:100%;height:6px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:3px;transition:width 0.5s,background 0.6s}
+.score-sublabel{font-size:12px;color:var(--color-text-secondary);text-align:center}
+
+/* gap navigation card */
+#gap-card{width:100%;border-radius:var(--border-radius-lg);border:0.5px solid rgba(122,179,212,0.3);padding:16px 20px;background:rgba(122,179,212,0.04);display:none;flex-direction:column;gap:10px}
+#gap-card.visible{display:flex}
+.gap-card-title{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#7ab3d4}
+.gap-card-body{font-size:13px;color:var(--color-text-primary);line-height:1.6}
+.gap-card-note{font-size:11px;color:var(--color-text-secondary);font-style:italic}
+.gap-examples{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.gap-example{padding:10px 14px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);border-left:2px solid #7ab3d4}
+.gap-example-title{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.gap-example-desc{font-size:11px;color:var(--color-text-secondary);margin-top:2px;line-height:1.5}
+
+/* transparency panel */
+.transparency{width:100%;border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);overflow:hidden}
+.transparency-header{padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.transparency-header:hover{background:var(--color-background-secondary)}
+.transparency-title{font-size:12px;color:var(--color-text-secondary)}
+.transparency-toggle{font-size:11px;color:var(--color-text-secondary)}
+.transparency-body{padding:0 16px;max-height:0;overflow:hidden;transition:max-height 0.3s,padding 0.3s}
+.transparency-body.open{max-height:600px;padding:0 16px 16px}
+.transparency-body p{font-size:12px;color:var(--color-text-secondary);line-height:1.7;margin-bottom:8px}
+.transparency-body strong{color:var(--color-text-primary)}
+.transparency-body a{color:#7ab3d4;text-decoration:none}
+.transparency-body a:hover{text-decoration:underline}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)}
+.ld{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.hint{font-size:11px;color:var(--color-text-secondary);text-align:center;opacity:0.55}
+</style>
+
+<div id="root">
+  <h2 class="sr-only">Audio sculpture — acoustic truth vs classifier simulation with gap navigation</h2>
+  <div id="cw">
+    <canvas id="c"></canvas>
+    <div id="op-label"></div>
+  </div>
+
+  <div class="transport">
+    <label class="lbl-btn" for="fi"><i class="ti ti-upload" aria-hidden="true" style="font-size:14px"></i>Upload song</label>
+    <input type="file" id="fi" accept="audio/*">
+    <button class="btn" id="btn-mic"><i class="ti ti-microphone" aria-hidden="true" style="font-size:14px"></i>Mic</button>
+    <button class="btn" id="btn-pp" disabled><i class="ti ti-player-play" aria-hidden="true" id="pp-icon" style="font-size:14px"></i><span id="pp-lbl">Play</span></button>
+    <button class="btn btn-stop" id="btn-stop" disabled><i class="ti ti-player-stop" aria-hidden="true" style="font-size:14px"></i>Stop</button>
+    <button class="btn" id="btn-end" disabled><i class="ti ti-player-skip-forward" aria-hidden="true" style="font-size:14px"></i>Jump to end</button>
+    <button class="btn" id="btn-reset"><i class="ti ti-trash" aria-hidden="true" style="font-size:14px"></i>Clear</button>
+  </div>
+
+  <div class="seek-row">
+    <div class="seek-top">
+      <span id="status-txt">Upload a song to begin sculpting</span>
+      <span id="time-txt"></span>
+    </div>
+    <div id="prog-track"><div id="prog-fill"></div><div id="prog-thumb"></div></div>
+  </div>
+
+  <div class="score-block">
+    <div class="score-label">Classifier Predictability Score</div>
+    <div class="score-number" id="score-num">—</div>
+    <div class="score-bar-track"><div class="score-bar-fill" id="score-bar" style="width:0%"></div></div>
+    <div class="score-sublabel" id="score-sub">Play a song to generate a score</div>
+  </div>
+
+  <!-- gap navigation card — appears when suppression is high -->
+  <div id="gap-card">
+    <div class="gap-card-title">↳ What lives in this gap</div>
+    <div class="gap-card-body" id="gap-body"></div>
+    <div class="gap-examples" id="gap-examples"></div>
+    <div class="gap-card-note">These are curatorial suggestions, not algorithmic recommendations. They are drawn from traditions the classifier is documented to suppress.</div>
+  </div>
+
+  <div class="legend">
+    <div class="li"><div class="ld" style="background:#e8a060"></div>Bass (truth)</div>
+    <div class="li"><div class="ld" style="background:#5dcaa5"></div>Mid (truth)</div>
+    <div class="li"><div class="ld" style="background:#e07060"></div>Treble (truth)</div>
+    <div class="li"><div class="ld" style="background:#7ab3d4"></div>Classifier rewarded</div>
+    <div class="li"><div class="ld" style="background:#2a3a4a"></div>Classifier suppressed</div>
+  </div>
+  <div class="hint">Drag to rotate · Warm outer shell = acoustic truth · Cold inner core = what the classifier hears · The gap is the bias</div>
+
+  <!-- transparency panel -->
+  <div class="transparency">
+    <div class="transparency-header" id="trans-header">
+      <span class="transparency-title">About this simulation — methodology + sources</span>
+      <span class="transparency-toggle" id="trans-toggle">Show ↓</span>
+    </div>
+    <div class="transparency-body" id="trans-body">
+      <p><strong>What this is</strong><br>This is a rhetorical simulation, not a technical replication of any specific classifier. It is designed to make visible the documented bias logic of mainstream audio ML systems — not to claim it runs CLAP, MERT, or any other model.</p>
+      <p><strong>What the classifier simulation models</strong><br>The cold inner layer penalizes high spectral flux (rapid unpredictable change), high entropy (energy spread across many frequencies), and moments outside a narrow mid-range frequency band. It rewards periodicity — repeating patterns that sit stably on a regular grid. These penalties are grounded in documented failure modes of pretrained audio models on non-Western music.</p>
+      <p><strong>Empirical grounding</strong><br>CLAP-Music scores 80.1% ROC-AUC on Western pop corpora and 61.5% on Carnatic music — an 18.6 point drop that grows monotonically with cultural distance from Western pretraining data. Source: Papaioannou, Benetos & Potamianos, "Universal Music Representations?" ISMIR 2025 (preprint).</p>
+      <p>94% of total training hours in the field's standard corpora are Western music. African music across an entire decade of conference output totals 28 hours. Source: Mehta et al., "Music for All," arXiv 2025 / NAACL 2025.</p>
+      <p><strong>The three-stage framework</strong><br>This project is situated within a broader analysis of how musical misrecognition moves from editorial choice (a person decontextualizes) → platform coercion (an algorithm imposes a schema) → training data (flattening inscribed before any model trains). By stage three, nobody is making a choice. There is simply no field for Raag Megh. Source: Hodgson, "Unruly Musics," Unruly Intelligences in Music AI, UCLA DataX Pilot 2026.</p>
+      <p><strong>What this does not model</strong><br>Tempo and beat grid detection bias; key/scale detection forcing microtonal music into 12-TET; timbre classification trained on Western instrument taxonomies; training data corpus skew at the embedding level. A full technical replication would require running actual model embeddings — which is the research direction of the Unruly Intelligences project.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d'),cw=document.getElementById('cw');
+const opLabel=document.getElementById('op-label');
+const statusTxt=document.getElementById('status-txt'),timeTxt=document.getElementById('time-txt');
+const progTrack=document.getElementById('prog-track'),progFill=document.getElementById('prog-fill'),progThumb=document.getElementById('prog-thumb');
+const btnPP=document.getElementById('btn-pp'),btnStop=document.getElementById('btn-stop');
+const btnEnd=document.getElementById('btn-end'),btnMic=document.getElementById('btn-mic'),btnReset=document.getElementById('btn-reset');
+const fiInput=document.getElementById('fi');
+const scoreNum=document.getElementById('score-num'),scoreBar=document.getElementById('score-bar'),scoreSub=document.getElementById('score-sub');
+const gapCard=document.getElementById('gap-card'),gapBody=document.getElementById('gap-body'),gapExamples=document.getElementById('gap-examples');
+const transHeader=document.getElementById('trans-header'),transBody=document.getElementById('trans-body'),transToggle=document.getElementById('trans-toggle');
+
+// transparency toggle
+transHeader.addEventListener('click',()=>{
+  const open=transBody.classList.toggle('open');
+  transToggle.textContent=open?'Hide ↑':'Show ↓';
+});
+
+let audioCtx,analyser,source,bufLen,freqArr;
+let animId,playing=false,paused=false;
+let songDuration=0,songStart=0,pausedAt=0,currentBuffer=null,scrubbing=false;
+let rotX=0.3,rotY=0,targetRX=0.3,targetRY=0,dragging=false,lastMX=0,lastMY=0,autoRot=true;
+const sculpture=[];
+let lastFreqSnap=null,frameCount=0;
+let lastH=0,lastFlux=0,lastEnergy=0,lastReward=0,lastSuppression=0;
+let runningScore=0,scoreFrames=0,ptsPerFrame=2;
+let opLabelTimer=null, suppressionHistory=[];
+
+// named operations — from the three-stage framework
+const OPERATIONS=[
+  {threshold:0.72, label:'No field exists for this structure'},
+  {threshold:0.65, label:'Coercing to nearest Western equivalent'},
+  {threshold:0.58, label:'Suppressing complexity — outside training distribution'},
+  {threshold:0.50, label:'Partial misrecognition — classifier uncertain'},
+];
+
+// curatorial gap suggestions — traditions documented as suppressed
+const GAP_SUGGESTIONS=[
+  {
+    trigger:0.55, // suppression threshold to show card
+    body:'The classifier is suppressing significant complexity in this passage. This music occupies space the algorithm has no field for. Below are traditions that live in this gap — documented by CLAP-Music to score 15–20 points lower than comparable Western material.',
+    examples:[
+      {title:'Carnatic vocal improvisation', desc:'Microtonal ornaments (gamakas) and raga-based melodic systems fall outside 12-TET assumptions. CLAP-Music: 61.5% ROC-AUC vs 80.1% on Western pop.'},
+      {title:'Gnawa lila ceremony', desc:'Trance-inducing polyrhythm and call-response structures with high spectral flux. Collapses into "World / Other" in all five major training corpora audited by Mehta et al.'},
+      {title:'Qawwali — Nusrat Fateh Ali Khan', desc:'Extended improvisation, non-Western meter, and vocal ornamentation the classifier reads as unpredictable noise rather than structured performance.'},
+      {title:'Hindustani dhrupad', desc:'Slow melodic unfolding with microtonal inflection. Spotify API returns key as irrelevant Western equivalent — the same coercion as Raag Megh → E Minor.'},
+    ]
+  }
+];
+
+function fmt(s){const m=Math.floor(s/60)|0,sec=Math.floor(s%60)|0;return m+':'+(sec<10?'0':'')+sec;}
+function resize(){canvas.width=cw.clientWidth;canvas.height=cw.clientHeight;}
+resize();window.addEventListener('resize',resize);
+
+cw.addEventListener('mousedown',e=>{if(!scrubbing){dragging=true;lastMX=e.clientX;lastMY=e.clientY;}});
+window.addEventListener('mouseup',()=>{dragging=false;if(scrubbing){scrubbing=false;progThumb.style.display='none';}});
+window.addEventListener('mousemove',e=>{
+  if(scrubbing){doSeek(e.clientX);return;}
+  if(!dragging)return;
+  targetRY+=(e.clientX-lastMX)*0.013;
+  targetRX=Math.max(-1.2,Math.min(1.2,targetRX+(e.clientY-lastMY)*0.009));
+  lastMX=e.clientX;lastMY=e.clientY;
+});
+cw.addEventListener('touchstart',e=>{if(!scrubbing){dragging=true;lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;}},{passive:true});
+window.addEventListener('touchend',()=>{dragging=false;if(scrubbing){scrubbing=false;progThumb.style.display='none';}});
+window.addEventListener('touchmove',e=>{
+  if(scrubbing){doSeek(e.touches[0].clientX);return;}
+  if(!dragging)return;
+  targetRY+=(e.touches[0].clientX-lastMX)*0.013;
+  targetRX=Math.max(-1.2,Math.min(1.2,targetRX+(e.touches[0].clientY-lastMY)*0.009));
+  lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;
+},{passive:true});
+
+function doSeek(clientX){
+  if(!currentBuffer||songDuration===0)return;
+  const rect=progTrack.getBoundingClientRect();
+  const frac=Math.max(0,Math.min(0.999,(clientX-rect.left)/rect.width));
+  const offset=frac*songDuration;
+  pausedAt=offset;
+  progFill.style.width=(frac*100).toFixed(1)+'%';
+  progThumb.style.left=(frac*100).toFixed(1)+'%';
+  progThumb.style.display='block';
+  timeTxt.textContent=fmt(offset)+' / '+fmt(songDuration);
+  if(playing){killSource();startFromOffset(offset);}
+}
+progTrack.addEventListener('mousedown',e=>{if(!currentBuffer)return;scrubbing=true;doSeek(e.clientX);});
+progTrack.addEventListener('touchstart',e=>{if(!currentBuffer)return;scrubbing=true;doSeek(e.touches[0].clientX);},{passive:true});
+
+function entropy(arr){const t=arr.reduce((a,b)=>a+b,0);if(!t)return 0;let H=0;for(const v of arr){const p=v/t;if(p>0)H-=p*Math.log2(p);}return H;}
+function spectralFlux(cur,prev){if(!prev)return 0;let f=0;for(let i=0;i<Math.min(cur.length,prev.length);i++){const d=(cur[i]-prev[i])/255;f+=Math.max(0,d)**2;}return Math.sqrt(f/cur.length);}
+function periodicityScore(cur,prev){if(!prev)return 0;let s=0;const n=Math.min(cur.length,prev.length,256);for(let i=0;i<n;i++)s+=1-Math.abs(cur[i]-prev[i])/255;return s/n;}
+
+function colorTruth(t,fVal,isPeak){
+  let r,g,b;
+  if(t<0.33){const s=t/0.33;r=190+s*20|0;g=110+s*50|0;b=55+s*15|0;}
+  else if(t<0.66){const s=(t-0.33)/0.33;r=75+s*15|0;g=185+s*15|0;b=145+s*15|0;}
+  else{const s=(t-0.66)/0.34;r=205+s*50|0;g=85-s*45|0;b=75-s*25|0;}
+  if(isPeak){r=Math.min(255,r+50);g=Math.min(255,g+40);}
+  return{r,g,b,a:0.22+fVal*0.6};
+}
+function colorClassifier(rwd,sup){
+  if(sup)return{r:30,g:45,b:60,a:0.1+rwd*0.12};
+  return{r:80+rwd*42|0,g:145+rwd*45|0,b:185+rwd*45|0,a:0.18+rwd*0.52};
+}
+function scoreToColor(s){if(s<30)return'#c06050';if(s<55)return'#c09040';if(s<70)return'#a0a850';if(s<85)return'#60a8c0';return'#7ab3d4';}
+function scoreToLabel(s){
+  if(s<20)return'Highly complex — classifier penalizes this music';
+  if(s<40)return'Complex — resists classification';
+  if(s<60)return'Moderate — partially legible to the classifier';
+  if(s<80)return'Predictable — classifier rewards this structure';
+  return'Highly predictable — classifier strongly rewards this';
+}
+function project(x,y,z){
+  const cY=Math.cos(rotY),sY=Math.sin(rotY),cX=Math.cos(rotX),sX=Math.sin(rotX);
+  const x1=x*cY-z*sY,z1=x*sY+z*cY,y1=y*cX-z1*sX,z2=y*sX+z1*cX;
+  const fov=520,sc=fov/(fov+z2+360);
+  return{sx:canvas.width/2+x1*sc,sy:canvas.height/2+y1*sc,z:z2,sc};
+}
+
+function showOpLabel(suppression){
+  const op=OPERATIONS.find(o=>suppression>=o.threshold);
+  if(op){
+    opLabel.textContent=op.label;
+    opLabel.classList.add('visible');
+    if(opLabelTimer)clearTimeout(opLabelTimer);
+    opLabelTimer=setTimeout(()=>opLabel.classList.remove('visible'),3500);
+  }
+}
+
+function updateGapCard(avgSuppression){
+  const suggestion=GAP_SUGGESTIONS.find(g=>avgSuppression>=g.trigger);
+  if(suggestion&&!playing){
+    gapCard.classList.add('visible');
+    gapBody.textContent=suggestion.body;
+    gapExamples.innerHTML=suggestion.examples.map(e=>`
+      <div class="gap-example">
+        <div class="gap-example-title">${e.title}</div>
+        <div class="gap-example-desc">${e.desc}</div>
+      </div>
+    `).join('');
+  } else {
+    gapCard.classList.remove('visible');
+  }
+}
+
+function captureFrame(){
+  analyser.getByteFrequencyData(freqArr);
+  const cur=Array.from(freqArr);
+  const flux=spectralFlux(cur,lastFreqSnap);
+  const H=entropy(cur.slice(0,256));
+  const periodicity=periodicityScore(cur,lastFreqSnap);
+  lastFreqSnap=cur.slice();
+  const energy=cur.slice(0,512).reduce((a,b)=>a+b,0)/512/255;
+  const bass=cur.slice(0,16).reduce((a,b)=>a+b,0)/16/255;
+  const complexity=Math.min(1,flux*10+H/11);
+  const rawReward=Math.max(0,periodicity*0.7-flux*4-(H/11)*0.4+0.3);
+  const rewardScore=Math.min(1,rawReward);
+  const suppressionRate=Math.min(1,flux*8+(H/11)*0.6);
+
+  lastH=lastH*0.88+H*0.12;
+  lastFlux=lastFlux*0.88+flux*0.12;
+  lastEnergy=lastEnergy*0.88+energy*0.12;
+  lastReward=lastReward*0.88+rewardScore*0.12;
+  lastSuppression=lastSuppression*0.88+suppressionRate*0.12;
+  runningScore=(runningScore*scoreFrames+rewardScore*100)/(scoreFrames+1);
+  scoreFrames++;
+
+  // track suppression history for gap card
+  suppressionHistory.push(suppressionRate);
+  if(suppressionHistory.length>200)suppressionHistory.shift();
+
+  // show named operation label on high suppression moments
+  if(suppressionRate>0.50&&frameCount%20===0) showOpLabel(suppressionRate);
+
+  if(energy<0.015)return;
+  const want=Math.max(1,Math.round(ptsPerFrame*(0.4+energy*0.8+complexity*0.6)));
+  const spikiness=28+complexity*155;
+
+  for(let i=0;i<want;i++){
+    const fi=Math.floor(Math.random()*430),t=fi/430,fVal=cur[fi]/255;
+    if(fVal<0.06)continue;
+    const theta=(Math.random()-0.5)*Math.PI,phi=Math.random()*Math.PI*2;
+    const rr=(55+fVal*95+bass*45)+(Math.sin(phi*3+t*7+H*2)*0.5+0.5)*spikiness*fVal;
+    const isPeak=fVal>0.78;
+    const{r,g,b,a}=colorTruth(t,fVal,isPeak);
+    sculpture.push({x:rr*Math.cos(theta)*Math.cos(phi),y:rr*Math.sin(theta),z:rr*Math.cos(theta)*Math.sin(phi),r,g,b,a,size:1.5+fVal*3.5+(isPeak?2:0),kind:'truth'});
+  }
+
+  const cw2=Math.max(0,Math.round(ptsPerFrame*rewardScore*1.8-ptsPerFrame*suppressionRate*0.9));
+  for(let i=0;i<cw2+1;i++){
+    const fi=Math.floor(8+Math.random()*192),t=fi/430,fVal=cur[fi]/255;
+    if(fVal<0.04)continue;
+    const sup=suppressionRate>0.45;
+    const theta=(Math.random()-0.5)*Math.PI,phi=Math.random()*Math.PI*2;
+    const rr=(sup?12+fVal*22:28+rewardScore*62+fVal*28)+Math.random()*8;
+    const{r,g,b,a}=colorClassifier(rewardScore,sup);
+    sculpture.push({x:rr*Math.cos(theta)*Math.cos(phi),y:rr*Math.sin(theta),z:rr*Math.cos(theta)*Math.sin(phi),r,g,b,a,size:sup?0.7+fVal:1.1+rewardScore*2.2,kind:'classifier'});
+  }
+}
+
+function draw(){
+  rotX+=(targetRX-rotX)*0.1;rotY+=(targetRY-rotY)*0.1;
+  if(autoRot&&!dragging&&!scrubbing)targetRY+=playing?0.003:0.005;
+
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#070710';ctx.fillRect(0,0,W,H);
+
+  frameCount++;
+  if(playing&&analyser&&frameCount%3===0)captureFrame();
+
+  if(sculpture.length===0){
+    ctx.fillStyle='rgba(255,255,255,0.06)';ctx.font='13px sans-serif';ctx.textAlign='center';
+    ctx.fillText('Upload a song — the sculpture grows as it plays',W/2,H/2);ctx.textAlign='left';
+  }else{
+    const proj=sculpture.map(p=>{
+      const q=project(p.x,p.y,p.z);
+      return{...q,r:p.r,g:p.g,b:p.b,a:p.a,size:p.size,kind:p.kind};
+    });
+    proj.sort((a,b)=>a.z-b.z);
+    for(const p of proj){
+      const s=Math.max(0.4,p.size*p.sc);
+      ctx.beginPath();ctx.arc(p.sx,p.sy,s,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},${p.a})`;ctx.fill();
+      if(p.kind==='truth'&&p.size>3.5){
+        ctx.beginPath();ctx.arc(p.sx,p.sy,s*2.1,0,Math.PI*2);
+        ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},${p.a*0.1})`;ctx.fill();
+      }
+    }
+  }
+
+  // update score
+  if(scoreFrames>0){
+    const s=Math.round(runningScore),col=scoreToColor(s);
+    scoreNum.textContent=s;scoreNum.style.color=col;
+    scoreBar.style.width=s+'%';scoreBar.style.background=col;
+    scoreSub.textContent=scoreToLabel(s);
+  }
+
+  if(!scrubbing&&playing&&songDuration>0&&audioCtx){
+    const elapsed=Math.min(songDuration,audioCtx.currentTime-songStart);
+    const pct=(elapsed/songDuration)*100;
+    progFill.style.width=pct.toFixed(1)+'%';
+    progThumb.style.left=pct.toFixed(1)+'%';
+    progThumb.style.display='block';
+    timeTxt.textContent=fmt(elapsed)+' / '+fmt(songDuration);
+    if(elapsed>=songDuration-0.2){
+      playing=false;autoRot=true;setButtonState('stopped');
+      statusTxt.textContent='Complete — drag to explore the sculpture';
+      // show gap card based on average suppression
+      const avgSup=suppressionHistory.length>0?suppressionHistory.reduce((a,b)=>a+b,0)/suppressionHistory.length:0;
+      updateGapCard(avgSup);
+    }
+  }
+
+  animId=requestAnimationFrame(draw);
+}
+
+function setButtonState(state){
+  const icon=btnPP.querySelector('#pp-icon'),lbl=btnPP.querySelector('#pp-lbl');
+  if(state==='stopped'){btnPP.disabled=!!(!currentBuffer);btnStop.disabled=true;btnEnd.disabled=!!(!currentBuffer);icon.className='ti ti-player-play';lbl.textContent='Play';}
+  else if(state==='playing'){btnPP.disabled=false;btnStop.disabled=false;btnEnd.disabled=false;icon.className='ti ti-player-pause';lbl.textContent='Pause';}
+  else if(state==='paused'){btnPP.disabled=false;btnStop.disabled=false;btnEnd.disabled=false;icon.className='ti ti-player-play';lbl.textContent='Resume';}
+}
+function killSource(){if(source){try{source.stop&&source.stop();}catch(e){}try{source.disconnect();}catch(e){}source=null;}}
+function initAnalyser(src){
+  if(analyser){try{analyser.disconnect();}catch(e){}}
+  analyser=audioCtx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.78;
+  bufLen=analyser.frequencyBinCount;freqArr=new Uint8Array(bufLen);
+  src.connect(analyser);analyser.connect(audioCtx.destination);
+}
+async function ensureCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')await audioCtx.resume();}
+function calcPtsPerFrame(dur){ptsPerFrame=Math.max(0.5,Math.min(3,8000/((dur/3)*30/3)));}
+function startFromOffset(offset){
+  killSource();source=audioCtx.createBufferSource();source.buffer=currentBuffer;
+  initAnalyser(source);source.start(0,offset);songStart=audioCtx.currentTime-offset;playing=true;autoRot=true;
+  setButtonState('playing');gapCard.classList.remove('visible');
+}
+function resetAll(){
+  sculpture.length=0;lastFreqSnap=null;frameCount=0;
+  lastH=lastFlux=lastEnergy=lastReward=lastSuppression=0;
+  runningScore=0;scoreFrames=0;suppressionHistory=[];
+  progFill.style.width='0%';progThumb.style.display='none';timeTxt.textContent='';
+  scoreNum.textContent='—';scoreNum.style.color='';scoreBar.style.width='0%';scoreBar.style.background='';
+  scoreSub.textContent='Play a song to generate a score';
+  gapCard.classList.remove('visible');opLabel.classList.remove('visible');
+}
+
+fiInput.addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  resetAll();killSource();playing=false;paused=false;pausedAt=0;
+  await ensureCtx();statusTxt.textContent='Decoding…';
+  const ab=await file.arrayBuffer();
+  currentBuffer=await audioCtx.decodeAudioData(ab);
+  songDuration=currentBuffer.duration;calcPtsPerFrame(songDuration);
+  statusTxt.textContent=file.name.length>44?file.name.slice(0,42)+'…':file.name;
+  startFromOffset(0);fiInput.value='';if(!animId)draw();
+});
+btnMic.addEventListener('click',async()=>{
+  resetAll();killSource();playing=false;paused=false;currentBuffer=null;await ensureCtx();
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    source=audioCtx.createMediaStreamSource(stream);songDuration=0;ptsPerFrame=1.5;
+    initAnalyser(source);playing=true;autoRot=true;
+    statusTxt.textContent='Mic live — play something near it';setButtonState('playing');if(!animId)draw();
+  }catch(e){statusTxt.textContent='Mic access denied';}
+});
+btnPP.addEventListener('click',async()=>{
+  if(!audioCtx||!currentBuffer)return;
+  await ensureCtx();
+  if(playing){
+    pausedAt=audioCtx.currentTime-songStart;killSource();playing=false;paused=true;
+    if(audioCtx.state==='running')await audioCtx.suspend();
+    statusTxt.textContent='Paused — scrub to seek · Resume to continue';setButtonState('paused');
+    // show gap card on pause if suppression was high
+    const avgSup=suppressionHistory.length>0?suppressionHistory.reduce((a,b)=>a+b,0)/suppressionHistory.length:0;
+    updateGapCard(avgSup);
+  }else if(paused){
+    await ensureCtx();startFromOffset(Math.min(pausedAt,songDuration-0.1));
+    statusTxt.textContent='Sculpting…';
+  }
+});
+btnStop.addEventListener('click',async()=>{
+  killSource();playing=false;paused=false;pausedAt=0;autoRot=true;
+  if(audioCtx&&audioCtx.state==='running')await audioCtx.suspend();
+  progFill.style.width='0%';progThumb.style.display='none';timeTxt.textContent='';
+  statusTxt.textContent='Stopped — upload a new song or clear';setButtonState('stopped');
+  if(currentBuffer){btnPP.disabled=false;btnEnd.disabled=false;}
+  const avgSup=suppressionHistory.length>0?suppressionHistory.reduce((a,b)=>a+b,0)/suppressionHistory.length:0;
+  updateGapCard(avgSup);
+});
+btnEnd.addEventListener('click',async()=>{
+  if(!currentBuffer||songDuration===0)return;
+  await ensureCtx();startFromOffset(Math.max(0,songDuration-15));
+  statusTxt.textContent='Jumped to final 15 seconds';
+});
+btnReset.addEventListener('click',()=>{
+  resetAll();killSource();playing=false;paused=false;pausedAt=0;currentBuffer=null;autoRot=true;
+  statusTxt.textContent='Upload a song to begin sculpting';
+  btnPP.disabled=true;btnStop.disabled=true;btnEnd.disabled=true;
+});
+draw();
+</script>
